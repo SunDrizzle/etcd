@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# #!/bin/bash 是直接指定了应该去哪里找 bash
+# #!/usr/bin/env bash 则是告诉系统去 $PATH 包含的目录中挨个去找吧，先找到哪个，就用哪个
 
 source ./scripts/test_lib.sh
 
@@ -31,11 +33,14 @@ toggle_failpoints_default() {
   toggle_failpoints "$mode"
 }
 
+# 真正用来build etcd的函数
 etcd_build() {
+  # 设置bin文件路径
   out="bin"
   if [[ -n "${BINDIR}" ]]; then out="${BINDIR}"; fi
   toggle_failpoints_default
 
+  # build etcd
   run rm -f "${out}/etcd"
   (
     cd ./server
@@ -47,6 +52,7 @@ etcd_build() {
       -o="../${out}/etcd" . || return 2
   ) || return 2
 
+  # build ectdctl
   run rm -f "${out}/etcdctl"
   # shellcheck disable=SC2086
   (

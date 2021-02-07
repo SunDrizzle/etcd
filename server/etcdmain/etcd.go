@@ -52,9 +52,12 @@ var (
 func startEtcdOrProxyV2(args []string) {
 	grpc.EnableTracing = false
 
+	// 初始化config
 	cfg := newConfig()
+	// TODO
 	defaultInitialCluster := cfg.ec.InitialCluster
 
+	// 解析命令行变量
 	err := cfg.parse(args[1:])
 	lg := cfg.ec.GetLogger()
 	if lg == nil {
@@ -83,6 +86,7 @@ func startEtcdOrProxyV2(args []string) {
 		}
 	}()
 
+	// TODO: 不太明白这里的defaultHost的概念
 	defaultHost, dhErr := (&cfg.ec).UpdateDefaultClusterFromName(defaultInitialCluster)
 	if defaultHost != "" {
 		lg.Info(
@@ -94,6 +98,7 @@ func startEtcdOrProxyV2(args []string) {
 		lg.Info("failed to detect default host", zap.Error(dhErr))
 	}
 
+	// 生成数据文件夹，默认default.etcd
 	if cfg.ec.Dir == "" {
 		cfg.ec.Dir = fmt.Sprintf("%v.etcd", cfg.ec.Name)
 		lg.Warn(
@@ -105,6 +110,10 @@ func startEtcdOrProxyV2(args []string) {
 	var stopped <-chan struct{}
 	var errc <-chan error
 
+	// 这里获取了数据文件夹的类型
+	// 目前分为了member、proxy和empty
+	// 这里是根据文件夹类型启动了对应的程序
+	// TODO： 看一下文件夹类型是怎么赋值过来的
 	which := identifyDataDirOrDie(cfg.ec.GetLogger(), cfg.ec.Dir)
 	if which != dirEmpty {
 		lg.Info(
@@ -218,7 +227,9 @@ func startEtcdOrProxyV2(args []string) {
 }
 
 // startEtcd runs StartEtcd in addition to hooks needed for standalone etcd.
+// 开启一个 etcd server
 func startEtcd(cfg *embed.Config) (<-chan struct{}, <-chan error, error) {
+	// 根据config启动etcd server
 	e, err := embed.StartEtcd(cfg)
 	if err != nil {
 		return nil, nil, err
@@ -457,6 +468,7 @@ func identifyDataDirOrDie(lg *zap.Logger, dir string) dirType {
 	return dirEmpty
 }
 
+// 检测架构支持
 func checkSupportArch() {
 	// TODO qualify arm64
 	if runtime.GOARCH == "amd64" || runtime.GOARCH == "ppc64le" || runtime.GOARCH == "s390x" {

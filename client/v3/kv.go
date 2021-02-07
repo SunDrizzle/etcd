@@ -141,9 +141,11 @@ func (kv *kv) Txn(ctx context.Context) Txn {
 	}
 }
 
+// TODO:这边底层使用的是grpc通信，有时间看一下是怎么生成的
 func (kv *kv) Do(ctx context.Context, op Op) (OpResponse, error) {
 	var err error
 	switch op.t {
+	// get 用的就是range op
 	case tRange:
 		var resp *pb.RangeResponse
 		resp, err = kv.remote.Range(ctx, op.toRangeRequest(), kv.callOpts...)

@@ -29,6 +29,7 @@ const (
 var noPrefixEnd = []byte{0}
 
 // Op represents an Operation that kv can execute.
+// OP 代表了ectd kv数据库的一种操作
 type Op struct {
 	t   opType
 	key []byte
@@ -223,6 +224,7 @@ func OpGet(key string, opts ...OpOption) Op {
 		panic("`WithPrefix` and `WithFromKey` cannot be set at the same time, choose one")
 	}
 	ret := Op{t: tRange, key: []byte(key)}
+	// 将opts参数信息绑定到ret上
 	ret.applyOpts(opts)
 	return ret
 }
@@ -316,6 +318,7 @@ func opWatch(key string, opts ...OpOption) Op {
 	return ret
 }
 
+// 这里使用了指针，然后将参数信息绑定到了对象上，值得学习
 func (op *Op) applyOpts(opts []OpOption) {
 	for _, opt := range opts {
 		opt(op)

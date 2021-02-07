@@ -146,6 +146,7 @@ func getSubCommands(cmd *cobra.Command) []*cobra.Command {
 	return subCommands
 }
 
+// usageFunc 生成使用说明
 func usageFunc(cmd *cobra.Command) error {
 	subCommands := getSubCommands(cmd)
 	tabOut := getTabOutWithWriter(os.Stdout)
@@ -168,6 +169,7 @@ func usageFunc(cmd *cobra.Command) error {
 	return nil
 }
 
+// getTabOutWithWriter 格式化输出样式 tab对齐
 func getTabOutWithWriter(writer io.Writer) *tabwriter.Writer {
 	aTabOut := new(tabwriter.Writer)
 	aTabOut.Init(writer, 0, 8, 1, '\t', 0)

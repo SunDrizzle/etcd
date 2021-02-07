@@ -75,6 +75,7 @@ func argify(s string) []string {
 }
 
 func commandCtx(cmd *cobra.Command) (context.Context, context.CancelFunc) {
+	// 获取运行command的超时时间
 	timeOut, err := cmd.Flags().GetDuration("command-timeout")
 	if err != nil {
 		ExitWithError(ExitError, err)

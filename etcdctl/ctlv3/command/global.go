@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/bgentry/speakeasy"
-	"go.etcd.io/etcd/client/v3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/pkg/v3/flags"
 	"go.etcd.io/etcd/pkg/v3/srv"
 	"go.etcd.io/etcd/pkg/v3/transport"
@@ -83,6 +83,7 @@ type discoveryCfg struct {
 
 var display printer = &simplePrinter{}
 
+// 用来应用一些结果展示的选项参数
 func initDisplayFromCmd(cmd *cobra.Command) {
 	isHex, err := cmd.Flags().GetBool("hex")
 	if err != nil {
@@ -118,6 +119,7 @@ func clientConfigFromCmd(cmd *cobra.Command) *clientConfig {
 		ExitWithError(ExitError, err)
 	}
 	fs := cmd.InheritedFlags()
+	// TODO 这里是watch逻辑
 	if strings.HasPrefix(cmd.Use, "watch") {
 		// silence "pkg/flags: unrecognized environment variable ETCDCTL_WATCH_KEY=foo" warnings
 		// silence "pkg/flags: unrecognized environment variable ETCDCTL_WATCH_RANGE_END=bar" warnings
@@ -131,6 +133,7 @@ func clientConfigFromCmd(cmd *cobra.Command) *clientConfig {
 		ExitWithError(ExitError, err)
 	}
 	if debug {
+		// debug模式: 打印出所有的flag参数信息
 		clientv3.SetLogger(grpclog.NewLoggerV2WithVerbosity(os.Stderr, os.Stderr, os.Stderr, 4))
 		fs.VisitAll(func(f *pflag.Flag) {
 			fmt.Fprintf(os.Stderr, "%s=%v\n", flags.FlagToEnv("ETCDCTL", f.Name), f.Value)
@@ -144,15 +147,18 @@ func clientConfigFromCmd(cmd *cobra.Command) *clientConfig {
 	}
 
 	cfg := &clientConfig{}
+	// 从cmd中获取远端endpoint信息
 	cfg.endpoints, err = endpointsFromCmd(cmd)
 	if err != nil {
 		ExitWithError(ExitError, err)
 	}
-
+	// 获取其他的一些网络配置参数信息
 	cfg.dialTimeout = dialTimeoutFromCmd(cmd)
 	cfg.keepAliveTime = keepAliveTimeFromCmd(cmd)
 	cfg.keepAliveTimeout = keepAliveTimeoutFromCmd(cmd)
 
+	// 获取安全证书和授权相关的参数信息
+	// TODO: 这里也需要有时间看一看
 	cfg.scfg = secureCfgFromCmd(cmd)
 	cfg.acfg = authCfgFromCmd(cmd)
 
@@ -169,17 +175,20 @@ func mustClientCfgFromCmd(cmd *cobra.Command) *clientv3.Config {
 	return cfg
 }
 
+// 根据cmd生成一个client
 func mustClientFromCmd(cmd *cobra.Command) *clientv3.Client {
+	// 根据cmd生成client的config信息
 	cfg := clientConfigFromCmd(cmd)
 	return cfg.mustClient()
 }
 
 func (cc *clientConfig) mustClient() *clientv3.Client {
+	// 根据 clientConfig 生成 v3config
 	cfg, err := newClientCfg(cc.endpoints, cc.dialTimeout, cc.keepAliveTime, cc.keepAliveTimeout, cc.scfg, cc.acfg)
 	if err != nil {
 		ExitWithError(ExitBadArgs, err)
 	}
-
+	// 根据 v3config 生成 v3client
 	client, err := clientv3.New(*cfg)
 	if err != nil {
 		ExitWithError(ExitBadConnection, err)
@@ -404,6 +413,7 @@ func discoveryDNSClusterServiceNameFromCmd(cmd *cobra.Command) string {
 	return serviceNameStr
 }
 
+// discoveryCfgFromCmd 从cmd的flags中获取相关的配置信息
 func discoveryCfgFromCmd(cmd *cobra.Command) *discoveryCfg {
 	return &discoveryCfg{
 		domain:      discoverySrvFromCmd(cmd),
@@ -418,6 +428,7 @@ func endpointsFromCmd(cmd *cobra.Command) ([]string, error) {
 		return nil, err
 	}
 	// If domain discovery returns no endpoints, check endpoints flag
+	// 如果没有根据domain discovery找到endpoints，就是用endpoints参数信息
 	if len(eps) == 0 {
 		eps, err = cmd.Flags().GetStringSlice("endpoints")
 		if err == nil {
@@ -430,13 +441,16 @@ func endpointsFromCmd(cmd *cobra.Command) ([]string, error) {
 }
 
 func endpointsFromFlagValue(cmd *cobra.Command) ([]string, error) {
+	// 从cmd中获取配置信息
 	discoveryCfg := discoveryCfgFromCmd(cmd)
 
 	// If we still don't have domain discovery, return nothing
+	fmt.Println("discoveryCfg.domain", discoveryCfg.domain)
 	if discoveryCfg.domain == "" {
 		return []string{}, nil
 	}
 
+	// TODO:这里像是服务发现？根据domain和serviceName获取srvs
 	srvs, err := srv.GetClient("etcd-client", discoveryCfg.domain, discoveryCfg.serviceName)
 	if err != nil {
 		return nil, err

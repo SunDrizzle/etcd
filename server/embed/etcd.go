@@ -90,6 +90,7 @@ type peerListener struct {
 // The returned Etcd.Server is not guaranteed to have joined the cluster. Wait
 // on the Etcd.Server.ReadyNotify() channel to know when it completes and is ready for use.
 func StartEtcd(inCfg *Config) (e *Etcd, err error) {
+	// 配置合法性验证
 	if err = inCfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -125,7 +126,6 @@ func StartEtcd(inCfg *Config) (e *Etcd, err error) {
 	if e.sctxs, err = configureClientListeners(cfg); err != nil {
 		return e, err
 	}
-
 	for _, sctx := range e.sctxs {
 		e.Clients = append(e.Clients, sctx.l)
 	}

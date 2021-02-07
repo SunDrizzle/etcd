@@ -96,6 +96,7 @@ type SRVClients struct {
 }
 
 // GetClient looks up the client endpoints for a service and domain.
+// TODO:这里服务发现的东西不是太懂
 func GetClient(service, domain string, serviceName string) (*SRVClients, error) {
 	var urls []*url.URL
 	var srvs []*net.SRV

@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"go.etcd.io/etcd/client/v3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 var (
@@ -57,9 +57,13 @@ func NewGetCommand() *cobra.Command {
 }
 
 // getCommandFunc executes the "get" command.
+// get命令实际的运行函数
 func getCommandFunc(cmd *cobra.Command, args []string) {
+	// 解析args参数，根据参数确定key及对应的可选参数
 	key, opts := getGetOp(args)
+	fmt.Println("args", args, "key", key, "opts", opts)
 	ctx, cancel := commandCtx(cmd)
+	// 根据cmd生成v3client，并调用Get方法发送get请求
 	resp, err := mustClientFromCmd(cmd).Get(ctx, key, opts...)
 	cancel()
 	if err != nil {
@@ -82,7 +86,10 @@ func getCommandFunc(cmd *cobra.Command, args []string) {
 	display.Get(*resp)
 }
 
+// 根据args解析key和opts
+// 这里采用的模式是将所有的选项参数聚合起来，放到一个OpOption的slice里
 func getGetOp(args []string) (string, []clientv3.OpOption) {
+	// 参数合法性验证
 	if len(args) == 0 {
 		ExitWithError(ExitBadArgs, fmt.Errorf("get command needs one argument as key and an optional argument as range_end"))
 	}
@@ -96,6 +103,8 @@ func getGetOp(args []string) (string, []clientv3.OpOption) {
 	}
 
 	opts := []clientv3.OpOption{}
+	fmt.Println("getConsistency", getConsistency)
+	// TODO getConsistency的作用
 	switch getConsistency {
 	case "s":
 		opts = append(opts, clientv3.WithSerializable())
@@ -105,18 +114,22 @@ func getGetOp(args []string) (string, []clientv3.OpOption) {
 	}
 
 	key := args[0]
+	fmt.Println("get key", key)
 	if len(args) > 1 {
 		if getPrefix || getFromKey {
 			ExitWithError(ExitBadArgs, fmt.Errorf("too many arguments, only accept one argument when `--prefix` or `--from-key` is set"))
 		}
+		// 只会将第2个元素设为range范围
 		opts = append(opts, clientv3.WithRange(args[1]))
 	}
-
+	// 设置limit选项
 	opts = append(opts, clientv3.WithLimit(getLimit))
+	// 设置rev版本选项
 	if getRev > 0 {
 		opts = append(opts, clientv3.WithRev(getRev))
 	}
 
+	// 设置排序方式
 	sortByOrder := clientv3.SortNone
 	sortOrder := strings.ToUpper(getSortOrder)
 	switch {
@@ -130,6 +143,7 @@ func getGetOp(args []string) (string, []clientv3.OpOption) {
 		ExitWithError(ExitBadFeature, fmt.Errorf("bad sort order %v", getSortOrder))
 	}
 
+	// 设置根据某个字段排序
 	sortByTarget := clientv3.SortByKey
 	sortTarget := strings.ToUpper(getSortTarget)
 	switch {
@@ -151,7 +165,9 @@ func getGetOp(args []string) (string, []clientv3.OpOption) {
 
 	opts = append(opts, clientv3.WithSort(sortByTarget, sortByOrder))
 
+	// 设置前缀
 	if getPrefix {
+		// key是空字符串处理
 		if len(key) == 0 {
 			key = "\x00"
 			opts = append(opts, clientv3.WithFromKey())
@@ -160,6 +176,7 @@ func getGetOp(args []string) (string, []clientv3.OpOption) {
 		}
 	}
 
+	// 设置根据key的byte大小进行取值
 	if getFromKey {
 		if len(key) == 0 {
 			key = "\x00"
@@ -167,10 +184,12 @@ func getGetOp(args []string) (string, []clientv3.OpOption) {
 		opts = append(opts, clientv3.WithFromKey())
 	}
 
+	// 只获取key
 	if getKeysOnly {
 		opts = append(opts, clientv3.WithKeysOnly())
 	}
 
+	// 只获取count
 	if getCountOnly {
 		opts = append(opts, clientv3.WithCountOnly())
 	}

@@ -272,15 +272,18 @@ func (cfg *config) parse(arguments []string) error {
 	switch perr {
 	case nil:
 	case flag.ErrHelp:
+		// 解析错误，打印help信息
 		fmt.Println(flagsline)
 		os.Exit(0)
 	default:
 		os.Exit(2)
 	}
+	// 有多余的args未能够解析
 	if len(cfg.cf.flagSet.Args()) != 0 {
 		return fmt.Errorf("'%s' is not a valid flag", cfg.cf.flagSet.Arg(0))
 	}
 
+	// etcd --version
 	if cfg.printVersion {
 		fmt.Printf("etcd Version: %s\n", version.Version)
 		fmt.Printf("Git SHA: %s\n", version.GitSHA)
@@ -294,6 +297,7 @@ func (cfg *config) parse(arguments []string) error {
 	// This env variable must be parsed separately
 	// because we need to determine whether to use or
 	// ignore the env variables based on if the config file is set.
+	// 读取config-file位置
 	if cfg.configFile == "" {
 		cfg.configFile = os.Getenv(flags.FlagToEnv("ETCD", "config-file"))
 	}
@@ -368,6 +372,7 @@ func (cfg *config) configFromCmdLine() error {
 	return cfg.validate()
 }
 
+// configFromFile 从文件中读取config信息
 func (cfg *config) configFromFile(path string) error {
 	eCfg, err := embed.ConfigFromFile(path)
 	if err != nil {
